@@ -25,7 +25,7 @@
 using namespace std;
 
 int main(int argc, char **argv) {
-  BpfDevice dev = BpfDevice("en0");
+  TapDevice dev = TapDevice();
   if (dev.init() < 0) {
     return 1;
   };
@@ -41,6 +41,8 @@ int main(int argc, char **argv) {
           cout << ip_addr_string(search_addr.addr) << " IS " << mac_addr_string(p.payload.arp_payload.src_hw.addr) << endl;
           return 0;
         }
+      } else {
+        cout << "Unknown paket received" << endl;
       }
     }
   }
