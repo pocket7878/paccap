@@ -16,6 +16,7 @@
 
 #include "device.hpp"
 #include "net_util.hpp"
+#include "arp.hpp"
 
 BpfDevice::BpfDevice(char *ifname): ifname(ifname) {
 }
@@ -61,6 +62,8 @@ int BpfDevice::bind_device() {
         perror("ioctl BIOCPROMISC");
         return -1;
     }
+
+    return 0;
 }
 
 int BpfDevice::load_mac_addr() {
@@ -71,6 +74,13 @@ int BpfDevice::load_mac_addr() {
     return 0;
 }
 
+int BpfDevice::load_ip_addr() {
+    if (get_ip_addr(this->ifname, &this->ip_addr) < 0) {
+        return -1;
+    }
+    return 0;
+}
+
 int BpfDevice::init() {
     if (this->open_device() < 0) {
         return -1;
@@ -78,10 +88,20 @@ int BpfDevice::init() {
     if (this->bind_device() < 0) {
         return -1;
     }
+
+    if (this->load_mac_addr() < 0) {
+        return -1;
+    }
+
+    if (this->load_ip_addr() < 0) {
+        return -1;
+    }
+
+    return 0;
 }
 
-std::vector<nlohmann::json> BpfDevice::read_packets() {
-    std::vector<nlohmann::json> result;
+std::vector<pk_ethernet_frame_t> BpfDevice::read_packets() {
+    std::vector<pk_ethernet_frame_t> result;
     int read_byte = 0;
     char *bpf_buf = (char*)malloc(sizeof(char) * this->buf_len);
 
@@ -101,10 +121,48 @@ std::vector<nlohmann::json> BpfDevice::read_packets() {
 
     while(((int)(size_t)ptr + sizeof(bpf_buf)) < read_byte) {
         bpfPacket = (struct bpf_hdr*)((long)bpf_buf + (long)ptr);
-        nlohmann::json obj = parse_eth_frame(((long)bpf_buf + (long)ptr + bpfPacket->bh_hdrlen));
+        pk_ethernet_frame_t obj = parse_eth_frame(((long)bpf_buf + (long)ptr + bpfPacket->bh_hdrlen));
         result.push_back(obj);
         ptr += BPF_WORDALIGN(bpfPacket->bh_hdrlen + bpfPacket->bh_caplen);
     }
 
     return result;
+}
+
+int BpfDevice::send_arp_request(const ip_addr_t *addr) {
+  arp_data request;
+  request.htype = hton16(1);
+  request.ptype = hton16(TYPE_IPV4);
+  request.hsize = 6;
+  request.psize = 4;
+  request.op = hton16(1);
+  request.src_hw = this->mac_addr;
+  request.src_ip = this->ip_addr;
+  memset(&request.target_hw, 0, ETHERNET_ADDR_SIZE);
+  request.target_ip = *addr;
+  if (this->ethernet_output(TYPE_ARP, (uint8_t*)&request, sizeof(request), &ETHERNET_ADDR_BCAST) < 0) {
+    return -1;
+  }
+  return 0;
+}
+
+int BpfDevice::ethernet_output(uint16_t type, uint8_t *payload, size_t payload_length, const ethernet_addr_t *target_addr) {
+  uint8_t frame[ETHERNET_FRAME_SIZE_MAX] = {0};
+  eth_hdr *ehdr;
+  size_t flen;
+
+  ehdr = (eth_hdr*)frame;
+  memcpy(ehdr->dst.addr, target_addr->addr, ETHERNET_ADDR_SIZE);
+  memcpy(ehdr->src.addr, this->mac_addr.addr, ETHERNET_ADDR_SIZE);
+  ehdr->typ = hton16(type);
+  memcpy(ehdr + 1, payload, payload_length);
+  flen = sizeof(eth_hdr) + (payload_length < ETHERNET_PAYLOAD_SIZE_MIN ? ETHERNET_PAYLOAD_SIZE_MIN : payload_length);
+  return this->output(frame, flen) == (ssize_t)flen ? (ssize_t)payload_length : -1;
+}
+
+
+
+ssize_t BpfDevice::output(const uint8_t *frame, size_t flen) {
+  log_ethernet_frame(frame);
+  return write(this->fd, frame, flen);
 }

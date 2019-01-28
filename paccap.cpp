@@ -15,6 +15,7 @@
 #include <net/if_dl.h>
 #include <net/if_types.h>
 #include "device.hpp"
+#include "packet.hpp"
 
 using namespace std;
 
@@ -24,9 +25,8 @@ int main(int argc, char **argv) {
     return 1;
   };
   while (1) {
-    std::vector<nlohmann::json> packets = dev.read_packets();
-    for(auto obj : packets) {
-      cout << obj.dump() << endl;
+    std::vector<pk_ethernet_frame_t> packets = dev.read_packets();
+    for(auto p : packets) {
     }
   }
 
