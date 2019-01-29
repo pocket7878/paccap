@@ -4,6 +4,8 @@
 #include <cstdint>
 #include "ethernet.hpp"
 #include "ip.hpp"
+#include "arp.hpp"
+#include "json.hpp"
 
 #define PACKET_TYPE_IPV4 0
 #define PACKET_TYPE_ARP 1
@@ -15,11 +17,15 @@
 typedef struct {
     uint16_t src_port;
     uint16_t dst_port;
+
+    nlohmann::json to_json();
 } pk_tcp_data_t;
 
 typedef struct {
     uint16_t src_port;
     uint16_t dst_port;
+
+    nlohmann::json to_json();
 } pk_udp_data_t;
 
 typedef struct {
@@ -31,6 +37,8 @@ typedef struct {
         pk_tcp_data_t tcp_data;
         pk_udp_data_t udp_data;
     } data;
+
+    nlohmann::json to_json();
 } pk_ipv4_payload_t;
 
 typedef struct {
@@ -41,6 +49,8 @@ typedef struct {
     ip_addr_t src_ip;
     ethernet_addr_t dst_hw;
     ip_addr_t dst_ip;
+
+    nlohmann::json to_json();
 } pk_arp_payload_t;
 
 typedef struct {
@@ -52,6 +62,8 @@ typedef struct {
         pk_ipv4_payload_t ipv4_payload;
         pk_arp_payload_t arp_payload;
     } payload;
+
+    nlohmann::json to_json();
 } pk_ethernet_frame_t;
 
 #endif

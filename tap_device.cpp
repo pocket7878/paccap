@@ -70,7 +70,7 @@ int TapDevice::up_device() {
 
 int TapDevice::set_ip(ip_addr_t addr) {
     std::stringstream cmd;
-    cmd << "sudo ifconfig " << this->ifname << " " << ip_addr_string(addr.addr) << " 192.168.10.255 netmask 255.255.255.0 up";
+    cmd << "sudo ifconfig " << this->ifname << " " << ip_addr_string(addr.addr) << " up";
     std::cout << cmd.str() << std::endl;
     std::system(cmd.str().c_str());
     this->ip_addr = addr;

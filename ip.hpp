@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <functional>
 
 #define IP_PROT_TCP 6
 #define IP_PROT_UDP 17

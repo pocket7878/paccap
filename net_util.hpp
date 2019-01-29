@@ -1,3 +1,6 @@
+#ifndef __NET_UTIL_H__
+#define __NET_UTIL_H__
+
 #include <iostream>
 #include <cstdlib>
 #include <fcntl.h>
@@ -38,3 +41,5 @@ uint32_t hton32(uint32_t h);
 std::string mac_addr_string(uint8_t *addr);
 std::string ip_addr_string(uint8_t *addr);
 void log_ethernet_frame(const uint8_t *frame);
+
+#endif
