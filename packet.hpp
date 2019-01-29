@@ -1,54 +1,69 @@
+#ifndef __PACKET_H__
+#define __PACKET_H__
+
 #include <cstdint>
+#include "ethernet.hpp"
+#include "ip.hpp"
+#include "arp.hpp"
+#include "json.hpp"
 
-#define TYPE_IPV4 0x0008
-#define IP_PROT_TCP 6
-#define IP_PROT_UDP 17
+#define PACKET_TYPE_IPV4 0
+#define PACKET_TYPE_ARP 1
+#define PACKET_TYPE_UNKNOWN 2
 
-typedef struct {
-  uint8_t dst_mac[6];
-  uint8_t src_mac[6];
-  unsigned short typ;
-} eth_hdr;
-
-typedef struct {
-  unsigned char ihl: 4;
-  unsigned char version: 4;
-  unsigned char typ;
-  unsigned short total_len;
-  unsigned short id;
-  unsigned short offset: 13;
-  unsigned char flg: 3;
-  unsigned char ttl;
-  unsigned char protocol;
-  unsigned short checksum;
-  unsigned char src_addr[4];
-  unsigned char dst_addr[4];
-  unsigned int options;
-} ip_hdr;
+#define PACKET_PROTOCOL_TCP 0
+#define PACKET_PROTOCOL_UDP 1
 
 typedef struct {
-  unsigned short src_port;
-  unsigned short dst_port;
-  unsigned int seq_num;
-  unsigned int ack_num;
-  unsigned int hdr_len: 4;
-  unsigned int reserved: 6;
-  struct flags_t {
-    unsigned int urg: 1;
-    unsigned int ack: 1;
-    unsigned int psh: 1;
-    unsigned int rst: 1;
-    unsigned int syn: 1;
-    unsigned int fin: 1;
-  } flags;
-  unsigned short window_size;
-  unsigned short checksum;
-  unsigned short urgent_ptr;
-} tcp_hdr;
+    uint16_t src_port;
+    uint16_t dst_port;
+
+    nlohmann::json to_json();
+} pk_tcp_data_t;
 
 typedef struct {
-  unsigned short src_port;
-  unsigned short dst_port;
-  unsigned short data_len;
-  unsigned short checksum;
-} udp_hdr;
+    uint16_t src_port;
+    uint16_t dst_port;
+
+    nlohmann::json to_json();
+} pk_udp_data_t;
+
+typedef struct {
+    unsigned char protocol;
+    uint8_t ttl;
+    ip_addr_t src_ip;
+    ip_addr_t dst_ip;
+    union {
+        pk_tcp_data_t tcp_data;
+        pk_udp_data_t udp_data;
+    } data;
+
+    nlohmann::json to_json();
+} pk_ipv4_payload_t;
+
+typedef struct {
+    uint16_t htype;
+    uint16_t ptype;
+    uint16_t op;
+    ethernet_addr_t src_hw;
+    ip_addr_t src_ip;
+    ethernet_addr_t dst_hw;
+    ip_addr_t dst_ip;
+
+    nlohmann::json to_json();
+} pk_arp_payload_t;
+
+typedef struct {
+    unsigned char type;
+    uint16_t raw_type;
+    ethernet_addr_t src_hw;
+    ethernet_addr_t dst_hw;
+    union {
+        pk_ipv4_payload_t ipv4_payload;
+        pk_arp_payload_t arp_payload;
+    } payload;
+
+    nlohmann::json to_json();
+} pk_ethernet_frame_t;
+
+#endif
